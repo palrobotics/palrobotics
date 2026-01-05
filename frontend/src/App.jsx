@@ -19,6 +19,12 @@ import VerifyEmail from "./Pages/VerifyEmail";
 import AdminDashboard from "./Pages/AdminDashboard";
 
 export default function App() {
+  const BASE_URL = import.meta.env.VITE_BASE_URL;
+  useEffect(() => {
+    fetch(`${BASE_URL}/health`).catch((err) =>
+      console.log("Ping failed, but that's okay")
+    );
+  }, []);
   return (
     <AuthProvider>
       <Toaster
