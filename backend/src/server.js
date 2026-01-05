@@ -33,7 +33,6 @@ app.use("/admin", adminLimiter);
 
 /* ================= ROUTES ================= */
 
-import healthRoutes from "./routes/health.routes.js";
 import secureRoutes from "./routes/secure.routes.js";
 import mobileMoneyRoutes from "./routes/mobileMoney.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
@@ -58,11 +57,9 @@ app.use("/withdraw", withdrawRoutes);
 app.use("/wallet", walletRoutes);
 app.use("/webhook", webhookRoutes);
 app.use("/mobile-money", mobileMoneyRoutes);
-app.use("/health", healthRoutes);
 app.use("/secure", secureRoutes);
-app.get("/health", (_, res) => {
-  res.json({ status: "ok" });
-});
+
+app.get("/health", (req, res) => res.status(200).send("Awake"));
 
 /* ================= GLOBAL ERROR HANDLER ================= */
 
