@@ -1,12 +1,18 @@
 import admin from "firebase-admin";
 
+const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+
+if (!serviceAccountVar) {
+  throw new Error("FIREBASE_SERVICE_ACCOUNT is missing");
+}
+
+const serviceAccount = JSON.parse(serviceAccountVar);
+
+serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
+    credential: admin.credential.cert(serviceAccount),
   });
 }
 

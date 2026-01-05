@@ -5,6 +5,7 @@ import { AuthProvider } from "./Context/AuthContext";
 import ProtectedRoute from "./Components/ProtectedRoute";
 import AdminRoute from "./Components/Admin/AdminRoute";
 import { Toaster } from "react-hot-toast";
+import { useEffect } from "react";
 
 import Home from "./Pages/Home";
 import Plans from "./Pages/Plans";
