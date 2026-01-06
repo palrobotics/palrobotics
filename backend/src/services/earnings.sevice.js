@@ -11,16 +11,9 @@ export async function processDailyEarnings() {
 
   console.log("Starting daily earnings processing...");
 
-  // Fetch all active investments
-  const snap = await db
-    .collection("investments")
-    .where("status", "==", "active")
-    .get();
-
-  const totalDocs = snap.docs.length;
-  console.log(`Found ${totalDocs} active investments.`);
-
-  if (totalDocs === 0) return;
+  // Paginate through active investments to avoid fetching the entire collection at once
+  // Processed in pages of BATCH_SIZE
+  let lastDoc = null;
 
   // 2. Helper function to process a single investment
   const processInvestment = async (docSnapshot) => {
@@ -94,17 +87,27 @@ export async function processDailyEarnings() {
     }
   };
 
-  // 3. Process in chunks to prevent timeouts and rate limits
-  const docs = snap.docs;
-  for (let i = 0; i < totalDocs; i += BATCH_SIZE) {
-    const chunk = docs.slice(i, i + BATCH_SIZE);
+  // 3. Page through active investments using a cursor
+  let page = 0;
+  while (true) {
+    let q = db
+      .collection("investments")
+      .where("status", "==", "active")
+      .orderBy(admin.firestore.FieldPath.documentId())
+      .limit(BATCH_SIZE);
 
-    console.log(
-      `Processing batch ${i / BATCH_SIZE + 1} (${chunk.length} items)...`
-    );
+    if (lastDoc) q = q.startAfter(lastDoc);
 
-    // Execute the current batch in parallel
-    await Promise.all(chunk.map((doc) => processInvestment(doc)));
+    const snap = await q.get();
+    if (snap.empty) break;
+
+    page++;
+    console.log(`Processing page ${page} (${snap.docs.length} items)...`);
+
+    // Execute the current page in parallel
+    await Promise.all(snap.docs.map((doc) => processInvestment(doc)));
+
+    lastDoc = snap.docs[snap.docs.length - 1];
   }
 
   console.log("Daily earnings processing completed.");

@@ -48,7 +48,7 @@ export default function ApproveModal({ tx, onClose, onSuccess }) {
         <h3 className="text-lg font-semibold mb-3">Approve Transaction</h3>
 
         <p className="text-sm text-gray-600 mb-4">
-          You are about to approve a withdrawal of
+          You are about to approve a {tx.type} of
           <span className="font-semibold text-black">
             {" "}
             UGX{" "}
@@ -58,7 +58,7 @@ export default function ApproveModal({ tx, onClose, onSuccess }) {
           </span>{" "}
           for
           <span className="font-semibold text-black ml-2">
-            {tx.accountName}-{tx.phoneNumber}
+            {tx.accountName}-{tx.phoneNumber || tx.phone}
           </span>
           .
         </p>

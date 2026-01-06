@@ -19,6 +19,22 @@ export async function initiateMobileInvestment({
 
   //Manual investment approval-creating a pending transaction waiting admin approval
   if (transactionId !== "") {
+    // Idempotency: if an identical provider transaction was already recorded, return existing
+    const existing = await db
+      .collection("transactions")
+      .where("transactionId", "==", transactionId)
+      .limit(1)
+      .get();
+
+    if (!existing.empty) {
+      const doc = existing.docs[0].data();
+      return {
+        reference: doc.reference || reference,
+        manual: true,
+        message: "Existing transaction found",
+      };
+    }
+
     await db.collection("transactions").add({
       uid,
       reference,
