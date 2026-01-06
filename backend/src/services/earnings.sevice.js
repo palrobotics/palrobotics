@@ -8,25 +8,43 @@ export async function processDailyEarnings() {
   const now = new Date();
   const todayStart = new Date(now.setHours(0, 0, 0, 0));
 
+  // Get the list of IDs only (or refs) to iterate over
   const snap = await db
     .collection("investments")
     .where("status", "==", "active")
     .get();
 
-  for (const doc of snap.docs) {
+  console.log(`Processing ${snap.docs.length} active investments...`);
+
+  for (const docSnapshot of snap.docs) {
+    const invRef = db.collection("investments").doc(docSnapshot.id);
+
     try {
       await db.runTransaction(async (tx) => {
-        const inv = doc.data();
+        // This ensures if another process just updated it, we see the new data.
+        const freshInvSnap = await tx.get(invRef);
+
+        if (!freshInvSnap.exists) return; // Document might have been deleted
+        const inv = freshInvSnap.data();
+
+        // Double check status inside transaction
+        if (inv.status !== "active") return;
+
         const start = inv.startDate.toDate();
         const end = inv.endDate.toDate();
 
+        // Use the fresh lastPayoutAt
         const lastPayout = inv.lastPayoutAt ? inv.lastPayoutAt.toDate() : start;
 
         const d1 = new Date(lastPayout).setHours(0, 0, 0, 0);
         const d2 = new Date(todayStart).setHours(0, 0, 0, 0);
         const daysToPay = Math.floor((d2 - d1) / DAY_MS);
 
-        if (daysToPay <= 0) return;
+        // 3. Idempotency Check: If daysToPay is 0 or negative, STOP.
+        // This prevents double payment if the script runs twice.
+        if (daysToPay <= 0) {
+          return;
+        }
 
         const earnings = daysToPay * inv.dailyIncome;
         const walletRef = db.collection("wallets").doc(inv.uid);
@@ -43,7 +61,7 @@ export async function processDailyEarnings() {
 
         // Investment update
         const isFinished = todayStart >= end;
-        tx.update(doc.ref, {
+        tx.update(invRef, {
           lastPayoutAt: admin.firestore.Timestamp.fromDate(todayStart),
           status: isFinished ? "completed" : "active",
         });
@@ -51,23 +69,27 @@ export async function processDailyEarnings() {
         // Earnings ledger
         tx.set(db.collection("earnings").doc(), {
           uid: inv.uid,
-          investmentId: doc.id,
+          investmentId: freshInvSnap.id,
           amount: earnings,
           daysPaid: daysToPay,
+          paidAt: admin.firestore.Timestamp.fromDate(todayStart),
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        // Referral earnings (Level 2 & 3)
+        // Referral earnings
         await handleEarningsReferrals(
           tx,
           inv.uid,
           earnings,
           "daily_income",
-          doc.id
+          freshInvSnap.id
         );
       });
     } catch (err) {
-      console.error(`Failed to process investment ${doc.id}:`, err.message);
+      console.error(
+        `Failed to process investment ${docSnapshot.id}:`,
+        err.message
+      );
     }
   }
 }

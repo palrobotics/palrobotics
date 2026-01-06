@@ -82,8 +82,7 @@ app.use((err, req, res, next) => {
 });
 
 import { startEarningsCron } from "./cron/dailyEarnings.cron.js";
-import { processDailyEarnings } from "./services/earnings.sevice.js";
-processDailyEarnings();
+
 startEarningsCron();
 
 /* ================= START SERVER ================= */
