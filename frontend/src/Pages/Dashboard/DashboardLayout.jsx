@@ -63,7 +63,18 @@ export default function DashboardLayout({ title, children }) {
             </div>
             <div>
               <p className="text-sm font-semibold">{fullName}</p>
-              <p className="text-xs text-gray-400 truncate">{email}</p>
+              <p
+                className={`text-xs text-gray-400 truncate ${
+                  !isEmailVerified ? "cursor-pointer hover:text-orange-500" : ""
+                }`}
+                onClick={() => {
+                  if (!isEmailVerified) {
+                    navigate("/verifyEmail");
+                  }
+                }}
+              >
+                {email}
+              </p>
             </div>
           </div>
         </div>
@@ -108,7 +119,18 @@ export default function DashboardLayout({ title, children }) {
           onClick={() => setShowAccount(true)}
         >
           <p className="text-sm font-semibold">{fullName}</p>
-          <p className="text-xs text-gray-400 truncate">{email}</p>
+          <p
+            className={`text-xs text-gray-400 truncate ${
+              !isEmailVerified ? "cursor-pointer hover:text-orange-500" : ""
+            }`}
+            onClick={() => {
+              if (!isEmailVerified) {
+                navigate("/verifyEmail");
+              }
+            }}
+          >
+            {email}
+          </p>
         </div>
 
         <nav className="p-4 space-y-2">
@@ -166,7 +188,20 @@ export default function DashboardLayout({ title, children }) {
 
           <div className="text-right">
             <p className="text-sm font-medium text-black">{fullName}</p>
-            {!isAdmin && <p className="text-xs text-gray-500">{email}</p>}
+            {!isAdmin && (
+              <p
+                className={`text-xs text-gray-400 truncate ${
+                  !isEmailVerified ? "cursor-pointer hover:text-orange-500" : ""
+                }`}
+                onClick={() => {
+                  if (!isEmailVerified) {
+                    navigate("/verifyEmail");
+                  }
+                }}
+              >
+                {email}
+              </p>
+            )}
           </div>
         </div>
 

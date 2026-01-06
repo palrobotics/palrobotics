@@ -82,6 +82,17 @@ export default function VerifyEmail() {
     }
   };
 
+  // Skip function
+  const handleSkip = async () => {
+    try {
+      await signOut(auth);
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout failed during skip:", err);
+      navigate("/login");
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-orange-400 to-white px-6">
       <div className="w-full max-w-md bg-white rounded-2xl p-8 shadow-sm text-center">
@@ -112,6 +123,14 @@ export default function VerifyEmail() {
               : cooldown > 0
               ? `Resend in ${cooldown}s`
               : "Resend Verification Email"}
+          </button>
+
+          {/*Skip Button */}
+          <button
+            onClick={handleSkip}
+            className="w-full text-gray-500 text-sm py-2 hover:text-orange-500 transition font-medium underline underline-offset-4"
+          >
+            Skip for now
           </button>
         </div>
 
