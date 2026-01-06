@@ -3,70 +3,71 @@ import { db } from "../config/firebase.js";
 import { handleEarningsReferrals } from "../controllers/referrals.controller.js";
 
 const DAY_MS = 1000 * 60 * 60 * 24;
+const BATCH_SIZE = 50; // Process 50 investments in parallel
 
 export async function processDailyEarnings() {
   const now = new Date();
   const todayStart = new Date(now.setHours(0, 0, 0, 0));
 
-  // Get the list of IDs only (or refs) to iterate over
+  console.log("Starting daily earnings processing...");
+
+  // Fetch all active investments
   const snap = await db
     .collection("investments")
     .where("status", "==", "active")
     .get();
 
-  console.log(`Processing ${snap.docs.length} active investments...`);
+  const totalDocs = snap.docs.length;
+  console.log(`Found ${totalDocs} active investments.`);
 
-  for (const docSnapshot of snap.docs) {
+  if (totalDocs === 0) return;
+
+  // 2. Helper function to process a single investment
+  const processInvestment = async (docSnapshot) => {
     const invRef = db.collection("investments").doc(docSnapshot.id);
 
     try {
       await db.runTransaction(async (tx) => {
-        // This ensures if another process just updated it, we see the new data.
         const freshInvSnap = await tx.get(invRef);
+        if (!freshInvSnap.exists) return;
 
-        if (!freshInvSnap.exists) return; // Document might have been deleted
         const inv = freshInvSnap.data();
-
-        // Double check status inside transaction
         if (inv.status !== "active") return;
 
         const start = inv.startDate.toDate();
         const end = inv.endDate.toDate();
-
-        // Use the fresh lastPayoutAt
         const lastPayout = inv.lastPayoutAt ? inv.lastPayoutAt.toDate() : start;
 
         const d1 = new Date(lastPayout).setHours(0, 0, 0, 0);
         const d2 = new Date(todayStart).setHours(0, 0, 0, 0);
         const daysToPay = Math.floor((d2 - d1) / DAY_MS);
 
-        // 3. Idempotency Check: If daysToPay is 0 or negative, STOP.
-        // This prevents double payment if the script runs twice.
-        if (daysToPay <= 0) {
-          return;
-        }
+        if (daysToPay <= 0) return; // Idempotency check
 
         const earnings = daysToPay * inv.dailyIncome;
         const walletRef = db.collection("wallets").doc(inv.uid);
 
+        // Ensure wallet exists before update
         const walletSnap = await tx.get(walletRef);
-        if (!walletSnap.exists) throw new Error("Wallet not found");
+        if (!walletSnap.exists) {
+          throw new Error(`Wallet not found for user ${inv.uid}`);
+        }
 
-        // User earnings
+        // Credit User
         tx.update(walletRef, {
           balance: admin.firestore.FieldValue.increment(earnings),
           totalEarned: admin.firestore.FieldValue.increment(earnings),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        // Investment update
+        // Update Investment
         const isFinished = todayStart >= end;
         tx.update(invRef, {
           lastPayoutAt: admin.firestore.Timestamp.fromDate(todayStart),
           status: isFinished ? "completed" : "active",
         });
 
-        // Earnings ledger
+        // Ledger Entry
         tx.set(db.collection("earnings").doc(), {
           uid: inv.uid,
           investmentId: freshInvSnap.id,
@@ -76,7 +77,7 @@ export async function processDailyEarnings() {
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        // Referral earnings
+        // Referral Commission
         await handleEarningsReferrals(
           tx,
           inv.uid,
@@ -87,9 +88,24 @@ export async function processDailyEarnings() {
       });
     } catch (err) {
       console.error(
-        `Failed to process investment ${docSnapshot.id}:`,
+        `Error processing investment ${docSnapshot.id}:`,
         err.message
       );
     }
+  };
+
+  // 3. Process in chunks to prevent timeouts and rate limits
+  const docs = snap.docs;
+  for (let i = 0; i < totalDocs; i += BATCH_SIZE) {
+    const chunk = docs.slice(i, i + BATCH_SIZE);
+
+    console.log(
+      `Processing batch ${i / BATCH_SIZE + 1} (${chunk.length} items)...`
+    );
+
+    // Execute the current batch in parallel
+    await Promise.all(chunk.map((doc) => processInvestment(doc)));
   }
+
+  console.log("Daily earnings processing completed.");
 }

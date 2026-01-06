@@ -112,7 +112,16 @@ export async function getReferralEarningsSummary(req, res) {
   try {
     const uid = req.user.uid;
 
-    const snap = await db
+    // Query 1: Get Level 1 from 'transactions'
+    const level1Snap = await db
+      .collection("transactions")
+      .where("uid", "==", uid)
+      .where("type", "==", "referral_bonus")
+      .where("level", "==", 1)
+      .get();
+
+    // Query 2: Get Levels 2 & 3 from 'referral_earnings'
+    const levels23Snap = await db
       .collection("referral_earnings")
       .where("uid", "==", uid)
       .get();
@@ -124,15 +133,20 @@ export async function getReferralEarningsSummary(req, res) {
       total: 0,
     };
 
-    snap.forEach((doc) => {
-      const { level, amount } = doc.data();
-
-      if (level === 1) summary.level1 += amount;
-      if (level === 2) summary.level2 += amount;
-      if (level === 3) summary.level3 += amount;
-
-      summary.total += amount;
+    // Process Level 1
+    level1Snap.forEach((doc) => {
+      summary.level1 += Number(doc.data().amount) || 0;
     });
+
+    // Process Levels 2 and 3
+    levels23Snap.forEach((doc) => {
+      const { level, amount } = doc.data();
+      if (level === 2) summary.level2 += Number(amount) || 0;
+      if (level === 3) summary.level3 += Number(amount) || 0;
+    });
+
+    // Final Total
+    summary.total = summary.level1 + summary.level2 + summary.level3;
 
     return res.json(summary);
   } catch (err) {
@@ -147,6 +161,7 @@ export async function getTeamCount(req, res) {
   try {
     const uid = req.user.uid;
 
+    // Get the current user to find their referral code
     const userSnap = await db.collection("users").doc(uid).get();
     if (!userSnap.exists) {
       return res.json({ count: 0 });
@@ -157,51 +172,14 @@ export async function getTeamCount(req, res) {
       return res.json({ count: 0 });
     }
 
-    let total = 0;
-
-    // LEVEL 1
-    const level1Snap = await db
+    // Count ONLY direct invites
+    const countQuery = await db
       .collection("users")
       .where("referredBy", "==", myReferralCode)
+      .count()
       .get();
 
-    total += level1Snap.size;
-
-    if (level1Snap.empty) {
-      return res.json({ count: total });
-    }
-
-    // LEVEL 2
-    const level1Codes = level1Snap.docs
-      .map((d) => d.data().referralCode)
-      .filter(Boolean);
-
-    let level2Codes = [];
-
-    for (const code of level1Codes) {
-      const snap = await db
-        .collection("users")
-        .where("referredBy", "==", code)
-        .get();
-
-      total += snap.size;
-
-      snap.docs.forEach((d) => {
-        if (d.data().referralCode) {
-          level2Codes.push(d.data().referralCode);
-        }
-      });
-    }
-
-    // LEVEL 3
-    for (const code of level2Codes) {
-      const snap = await db
-        .collection("users")
-        .where("referredBy", "==", code)
-        .get();
-
-      total += snap.size;
-    }
+    const total = countQuery.data().count;
 
     return res.json({ count: total });
   } catch (err) {

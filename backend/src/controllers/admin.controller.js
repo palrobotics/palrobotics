@@ -200,32 +200,92 @@ export async function rejectWithdrawal(req, res, next) {
 export async function approveDeposit(req, res) {
   const { transactionId } = req.body;
 
-  await db.runTransaction(async (fireTx) => {
-    const txRef = db.collection("transactions").doc(transactionId);
-    const txSnap = await fireTx.get(txRef);
+  try {
+    await db.runTransaction(async (fireTx) => {
+      // Read 1: The Transaction
+      const txRef = db.collection("transactions").doc(transactionId);
+      const txSnap = await fireTx.get(txRef);
+      if (!txSnap.exists) throw new Error("Transaction not found");
+      const tx = txSnap.data();
 
-    if (!txSnap.exists) throw new Error("Transaction not found");
+      if (tx.status !== "pending_admin_approval") {
+        throw new Error("Transaction not pending admin approval");
+      }
 
-    const tx = txSnap.data();
-    if (tx.status !== "pending_admin_approval") {
-      throw new Error("Transaction not pending admin approval");
-    }
+      // Read 2: The User (to check if they've been rewarded before)
+      const userRef = db.collection("users").doc(tx.uid);
+      const userSnap = await fireTx.get(userRef);
+      if (!userSnap.exists) throw new Error("User not found");
+      const userData = userSnap.data();
 
-    const walletRef = db.collection("wallets").doc(tx.uid);
+      // Read 3: The Referrer (Conditional Read)
+      let referrerDoc = null;
+      if (!userData.firstDepositRewarded && userData.referredBy) {
+        const referrerQuery = await db
+          .collection("users")
+          .where("referralCode", "==", userData.referredBy)
+          .limit(1)
+          .get();
 
-    fireTx.update(walletRef, {
-      balance: admin.firestore.FieldValue.increment(tx.amount),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        if (!referrerQuery.empty) {
+          referrerDoc = referrerQuery.docs[0];
+        }
+      }
+
+      // Write 1: Update User Wallet
+      const userWalletRef = db.collection("wallets").doc(tx.uid);
+      fireTx.update(userWalletRef, {
+        balance: admin.firestore.FieldValue.increment(tx.amount),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Write 2: Update Deposit Transaction Status
+      fireTx.update(txRef, {
+        status: "approved",
+        approvedBy: req.user.uid,
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Write 3: Handle Referral Bonus if applicable
+      if (referrerDoc) {
+        const referrerUid = referrerDoc.id;
+        const rewardAmount = Math.floor(tx.amount * 0.3);
+        const referrerWalletRef = db.collection("wallets").doc(referrerUid);
+
+        // Credit Referrer
+        fireTx.update(referrerWalletRef, {
+          balance: admin.firestore.FieldValue.increment(rewardAmount),
+          totalEarned: admin.firestore.FieldValue.increment(rewardAmount),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Record Bonus Transaction
+        const bonusTxRef = db.collection("transactions").doc();
+        fireTx.set(bonusTxRef, {
+          uid: referrerUid,
+          amount: rewardAmount,
+          type: "referral_bonus",
+          sourceUid: tx.uid,
+          level: 1,
+          status: "completed",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Lock the reward on the User doc
+        fireTx.update(userRef, {
+          firstDepositRewarded: true,
+        });
+      }
     });
 
-    fireTx.update(txRef, {
-      status: "approved",
-      approvedBy: req.user.uid,
-      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+    res.json({
+      success: true,
+      message: "Approved and referral bonus processed",
     });
-  });
-
-  res.json({ success: true });
+  } catch (error) {
+    console.error("Approval Error:", error);
+    res.status(400).json({ success: false, message: error.message });
+  }
 }
 
 export async function approveInvestment(req, res) {
