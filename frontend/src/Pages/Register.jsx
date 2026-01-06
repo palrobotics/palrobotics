@@ -4,7 +4,6 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
 } from "firebase/auth";
-import { collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../Firebase";
 import { generateReferralCode } from "../utilities/utilities";
 import toast from "react-hot-toast";
@@ -51,8 +50,9 @@ export default function Register() {
   };
 
   const handleRegister = async () => {
-    if (!email || !password || !phone || !fullName) {
-      alert("Please fill all fields");
+    //Validation
+    if (!email || !password || !phone || !fullName || !referredBy) {
+      alert("Please fill all fields, including Referral Code");
       return;
     }
 
@@ -74,9 +74,8 @@ export default function Register() {
       // Generate THIS new user's unique code
       const myNewCode = generateReferralCode(user.uid);
 
-      const potentialInviter = referredBy
-        ? referredBy.trim().toUpperCase()
-        : null;
+      // referredBy is now guaranteed to exist
+      const potentialInviter = referredBy.trim().toUpperCase();
 
       //Save data
       await createUserProfileAndWallet(
@@ -221,8 +220,9 @@ export default function Register() {
 
             {/* Referral Code */}
             <div className="mb-6">
+              {/* UPDATED: Label changed to indicate required */}
               <label className="text-sm text-gray-600 block mb-1">
-                Referral Code (optional)
+                Referral Code <span className="text-red-500">*</span>
               </label>
 
               <div className="flex gap-2">
@@ -263,13 +263,15 @@ export default function Register() {
               disabled={
                 isRegistering ||
                 passwordStrength !== "strong" ||
-                password !== confirmPassword
+                password !== confirmPassword ||
+                !referredBy
               }
               className={`w-full py-3 rounded-lg transition
     ${
       !isRegistering &&
       passwordStrength === "strong" &&
-      password === confirmPassword
+      password === confirmPassword &&
+      referredBy
         ? "bg-black text-white hover:bg-gray-800"
         : "bg-gray-300 text-gray-500 cursor-not-allowed"
     }

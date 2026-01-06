@@ -11,6 +11,16 @@ export default function InvestButton({
   const [state, setState] = useState("idle");
 
   const handleInvest = async () => {
+    //Validation
+    if (verifyMethod === "manual" && !transactionId) {
+      alert("Please enter the Transaction ID to verify payment.");
+      return;
+    }
+    if (verifyMethod === "automatic" && !phone) {
+      alert("Please enter a valid Phone Number.");
+      return;
+    }
+
     try {
       setState("requesting");
 
@@ -36,17 +46,25 @@ export default function InvestButton({
               className="w-full bg-orange-500 mt-1 text-white py-3 rounded-lg"
               onClick={handleInvest}
             >
-              {verifyMethod === "automatic" ? "Invest Now" : "Verify"}
+              {verifyMethod === "automatic" ? "Invest Now" : "Verify Payment"}
             </button>
           </div>
         </>
       )}
 
       {state === "pending_confirmation" && (
-        <p>📲 Approve payment to activate investment</p>
+        <p className="text-center mt-2 text-sm text-green-600">
+          {verifyMethod === "automatic"
+            ? "📲 Check your phone to approve the payment."
+            : "✅ Transaction submitted for verification."}
+        </p>
       )}
 
-      {state === "failed" && <p>Investment failed. Try again.</p>}
+      {state === "failed" && (
+        <p className="text-red-500 text-center mt-2">
+          Investment failed. Try again.
+        </p>
+      )}
     </>
   );
 }

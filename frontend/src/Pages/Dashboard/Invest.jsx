@@ -294,6 +294,7 @@ export default function Invest() {
               method={paymentMethod}
               transactionId={transactionId}
               onClose={() => setShowDepositModal(false)}
+              verifyMethod={verifyMethod}
             />
           )}
         </motion.div>
