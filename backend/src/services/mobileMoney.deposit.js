@@ -4,7 +4,13 @@ import crypto from "crypto";
 import { initiateMTNPayment } from "./providers/mtn.provider.js";
 import { initiateAirtelPayment } from "./providers/airtel.provider.js";
 
-export async function initiateDeposit({ uid, amount, method, phone }) {
+export async function initiateDeposit({
+  uid,
+  amount,
+  method,
+  phone,
+  transactionId,
+}) {
   if (!amount || amount <= 0) {
     throw new Error("Invalid deposit amount");
   }
@@ -15,6 +21,29 @@ export async function initiateDeposit({ uid, amount, method, phone }) {
 
   const reference = crypto.randomUUID();
 
+  //Manual Verification-Creating a pending transaction waiting for admin approval
+  if (transactionId !== "") {
+    await db.collection("transactions").add({
+      uid,
+      reference,
+      type: "deposit",
+      source: "mobile_money",
+      method,
+      amount,
+      phone,
+      transactionId,
+      status: "pending_admin_approval",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return {
+      reference,
+      manual: true,
+      message: "Deposit pending admin approval",
+    };
+  }
+
+  //Automatic verification-creating a transaction for MTN/Airtel
   await db.collection("transactions").add({
     uid,
     reference,

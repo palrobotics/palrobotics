@@ -1,9 +1,18 @@
 import { FiUsers, FiClock, FiDollarSign } from "react-icons/fi";
 
-export default function AdminStats({ usersCount, pendingWithdrawals }) {
+export default function AdminStats({
+  usersCount,
+  pendingWithdrawals,
+  pendingDepositsAndInvestments,
+}) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <Stat icon={<FiUsers />} label="Total Users" value={usersCount} />
+      <Stat
+        icon={<FiClock />}
+        label="Pending Deposits/Investments"
+        value={pendingDepositsAndInvestments}
+      />
       <Stat
         icon={<FiClock />}
         label="Pending Withdrawals"

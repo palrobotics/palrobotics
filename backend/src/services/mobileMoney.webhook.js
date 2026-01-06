@@ -16,6 +16,11 @@ export async function processMobileMoneyWebhook(payload) {
   if (snap.empty) return;
   const txRef = snap.docs[0].ref;
 
+  // First Referral Hook
+  if (tx.type === "deposit" || tx.type === "investment") {
+    await handleFirstDepositReferral(t, tx);
+  }
+
   // 2. Run the logic inside a single transaction
   await db.runTransaction(async (t) => {
     const txSnap = await t.get(txRef);
@@ -74,11 +79,6 @@ export async function processMobileMoneyWebhook(payload) {
       balance: admin.firestore.FieldValue.increment(balanceChange),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-
-    // First Referral Hook
-    if (tx.type === "deposit" || tx.type === "investment") {
-      await handleFirstDepositReferral(t, tx);
-    }
 
     t.update(txRef, {
       status: "completed",

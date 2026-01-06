@@ -1,15 +1,33 @@
 import { adminApi } from "../../api/adminApi";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ApproveModal({ tx, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const queryClient = useQueryClient();
 
   async function handleApprove() {
     try {
       setLoading(true);
       setError(null);
-      await adminApi.approveWithdrawal(tx.id);
+
+      if (tx.type === "deposit") {
+        await adminApi.approveDeposit(tx.id);
+        queryClient.invalidateQueries({
+          queryKey: ["admin", "deposits", "manual", "pending"],
+        });
+      } else if (tx.type === "investment") {
+        await adminApi.approveInvestment(tx.id);
+        queryClient.invalidateQueries({
+          queryKey: ["admin", "deposits", "manual", "pending"],
+        });
+      } else if (tx.type === "withdraw") {
+        await adminApi.approveWithdrawal(tx.id);
+        queryClient.invalidateQueries({
+          queryKey: ["admin-withdrawals"],
+        });
+      }
 
       onSuccess?.();
       onClose();
@@ -17,7 +35,7 @@ export default function ApproveModal({ tx, onClose, onSuccess }) {
       setError(
         err?.response?.data?.message ||
           err.message ||
-          "Failed to approve withdrawal"
+          "Failed to approve Transaction"
       );
     } finally {
       setLoading(false);
@@ -27,13 +45,16 @@ export default function ApproveModal({ tx, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-        <h3 className="text-lg font-semibold mb-3">Approve Withdrawal</h3>
+        <h3 className="text-lg font-semibold mb-3">Approve Transaction</h3>
 
         <p className="text-sm text-gray-600 mb-4">
           You are about to approve a withdrawal of
           <span className="font-semibold text-black">
             {" "}
-            UGX {tx.netAmount?.toLocaleString()}
+            UGX{" "}
+            {tx.type === "withdraw"
+              ? tx.netAmount?.toLocaleString()
+              : tx.amount?.toLocaleString()}
           </span>{" "}
           for
           <span className="font-semibold text-black ml-2">

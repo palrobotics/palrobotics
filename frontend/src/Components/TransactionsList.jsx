@@ -22,7 +22,8 @@ export default function TransactionList({ title, transactions, loading }) {
                     <span>•</span>
                     <span
                       className={`font-medium ${
-                        tx.status === "pending"
+                        tx.status === "pending" ||
+                        tx.status === "pending_admin_approval"
                           ? "text-orange-500"
                           : tx.status === "approved" ||
                             tx.status === "completed"

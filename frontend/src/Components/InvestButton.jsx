@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { investWithMobileMoney } from "../services/mobileMoney";
 
-export default function InvestButton({ planId, method, phone }) {
+export default function InvestButton({
+  planId,
+  method,
+  phone,
+  transactionId,
+  verifyMethod,
+}) {
   const [state, setState] = useState("idle");
 
   const handleInvest = async () => {
@@ -12,6 +18,7 @@ export default function InvestButton({ planId, method, phone }) {
         planId,
         method,
         phone,
+        transactionId,
       });
 
       setState("pending_confirmation");
@@ -26,10 +33,10 @@ export default function InvestButton({ planId, method, phone }) {
         <>
           <div className="flex items-center justify-center">
             <button
-              className="text-white font-bold bg-orange-500 p-3 rounded-sm m-1"
+              className="w-full bg-orange-500 mt-1 text-white py-3 rounded-lg"
               onClick={handleInvest}
             >
-              Invest Now
+              {verifyMethod === "automatic" ? "Invest Now" : "Verify"}
             </button>
           </div>
         </>

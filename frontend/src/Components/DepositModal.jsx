@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { depositMobileMoney } from "../services/mobileMoney";
 
-export default function DepositModal({ amount, method, phone, onClose }) {
+export default function DepositModal({
+  amount,
+  method,
+  phone,
+  onClose,
+  transactionId,
+}) {
   const [state, setState] = useState("idle");
   const [error, setError] = useState(null);
 
@@ -14,6 +20,7 @@ export default function DepositModal({ amount, method, phone, onClose }) {
         amount: Number(amount),
         method,
         phone,
+        transactionId,
       });
 
       // Backend accepted request, waiting for provider
@@ -29,7 +36,7 @@ export default function DepositModal({ amount, method, phone, onClose }) {
       {state === "idle" && (
         <div className="flex items-center justify-center">
           <button
-            className="text-white font-bold bg-orange-500 p-3 rounded-sm m-1"
+            className="w-full bg-orange-500 mt-1 text-white py-3 rounded-lg"
             onClick={handleDeposit}
           >
             Confirm
@@ -38,7 +45,11 @@ export default function DepositModal({ amount, method, phone, onClose }) {
       )}
 
       {state === "pending_confirmation" && (
-        <p>Check your phone to approve payment</p>
+        <p>
+          {transactionId === ""
+            ? "Check your phone to approve payment"
+            : "Waiting for Admin approval"}
+        </p>
       )}
 
       {state === "failed" && <p className="error">{error}</p>}

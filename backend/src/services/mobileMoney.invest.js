@@ -4,13 +4,43 @@ import crypto from "crypto";
 import { initiateMTNPayment } from "./providers/mtn.provider.js";
 import { initiateAirtelPayment } from "./providers/airtel.provider.js";
 
-export async function initiateMobileInvestment({ uid, planId, method, phone }) {
+export async function initiateMobileInvestment({
+  uid,
+  planId,
+  method,
+  phone,
+  transactionId,
+}) {
   const planSnap = await db.collection("plans").doc(planId).get();
   if (!planSnap.exists) throw new Error("Plan not found");
 
   const plan = planSnap.data();
   const reference = crypto.randomUUID();
 
+  //Manual investment approval-creating a pending transaction waiting admin approval
+  if (transactionId !== "") {
+    await db.collection("transactions").add({
+      uid,
+      reference,
+      type: "investment",
+      source: "mobile_money",
+      method,
+      phone,
+      amount: plan.price,
+      planId,
+      transactionId,
+      status: "pending_admin_approval",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return {
+      reference,
+      manual: true,
+      message: "Investment pending admin approval",
+    };
+  }
+
+  //Automatic investment-creating a pending transaction waiting webhook approval
   await db.collection("transactions").add({
     uid,
     reference,

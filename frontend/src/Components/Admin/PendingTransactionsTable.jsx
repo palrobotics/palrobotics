@@ -2,15 +2,18 @@ import ApproveModal from "./AproveModal";
 import RejectModal from "./RejectModal";
 import { useState } from "react";
 
-export default function WithdrawalsTable({
-  withdrawals = [],
+export default function PendingTransactionsTable({
+  pendingTransactions = [],
+  type,
   onActionComplete,
+  approveFn,
+  rejectFn,
 }) {
   const [selectedTx, setSelectedTx] = useState(null);
   const [action, setAction] = useState(null);
 
-  if (withdrawals.length === 0) {
-    return <p className="text-sm text-gray-500">No pending withdrawals</p>;
+  if (pendingTransactions.length === 0) {
+    return <p className="text-sm text-gray-500">No pending {type}</p>;
   }
 
   return (
@@ -30,12 +33,16 @@ export default function WithdrawalsTable({
           </thead>
 
           <tbody>
-            {withdrawals.map((tx) => (
+            {pendingTransactions.map((tx) => (
               <tr key={tx.id} className="border-b hover:bg-gray-50">
-                <td className="py-3">{tx.id}</td>
-                <td className="font-medium">UGX {tx.netAmount}</td>
+                <td className="py-3">
+                  {tx.type === "withdraw" ? tx.id : tx.transactionId}
+                </td>
+                <td className="font-medium">
+                  UGX {tx.type === "withdraw" ? tx.netAmount : tx.amount}
+                </td>
                 <td>{tx.method}</td>
-                <td>{tx.phoneNumber}</td>
+                <td>{tx.phoneNumber || tx.phone}</td>
                 <td>{tx.accountName}</td>
                 <td className="text-right space-x-2">
                   <ActionButtons
@@ -52,15 +59,22 @@ export default function WithdrawalsTable({
 
       {/* ================= MOBILE CARDS ================= */}
       <div className="md:hidden space-y-4">
-        {withdrawals.map((tx) => (
+        {pendingTransactions.map((tx) => (
           <div
             key={tx.id}
             className="border border-orange-500/70 rounded-xl p-4 bg-white shadow-sm space-y-3"
           >
-            <Row label="TxID" value={tx.id} />
-            <Row label="Amount" value={`UGX ${tx.netAmount}`} bold />
+            <Row
+              label="TxID"
+              value={tx.type === "withdraw" ? tx.id : tx.transactionId}
+            />
+            <Row
+              label="Amount"
+              value={`UGX ${tx.type === "withdraw" ? tx.netAmount : tx.amount}`}
+              bold
+            />
             <Row label="Method" value={tx.method} />
-            <Row label="Phone" value={tx.phoneNumber} />
+            <Row label="Phone" value={tx.phoneNumber || tx.phone} />
             <Row label="Name" value={tx.accountName} />
 
             <div className="flex gap-3 pt-2">
@@ -94,6 +108,7 @@ export default function WithdrawalsTable({
           tx={selectedTx}
           onClose={() => setAction(null)}
           onSuccess={onActionComplete}
+          approveFn={approveFn}
         />
       )}
 
@@ -102,6 +117,7 @@ export default function WithdrawalsTable({
           tx={selectedTx}
           onClose={() => setAction(null)}
           onSuccess={onActionComplete}
+          rejectFn={rejectFn}
         />
       )}
     </>

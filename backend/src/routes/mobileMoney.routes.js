@@ -6,23 +6,25 @@ import { verifyFirebaseToken } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 router.post("/deposit", verifyFirebaseToken, async (req, res) => {
-  const { amount, method, phone } = req.body;
+  const { amount, method, phone, transactionId } = req.body;
   const result = await initiateDeposit({
     uid: req.user.uid,
     amount,
     method,
     phone,
+    transactionId,
   });
   res.json(result);
 });
 
 router.post("/invest", verifyFirebaseToken, async (req, res) => {
-  const { planId, method, phone } = req.body;
+  const { planId, method, phone, transactionId } = req.body;
   const result = await initiateMobileInvestment({
     uid: req.user.uid,
     planId,
     method,
     phone,
+    transactionId,
   });
   res.json(result);
 });

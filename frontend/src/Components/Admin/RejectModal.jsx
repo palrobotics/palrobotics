@@ -1,15 +1,28 @@
-import { adminApi } from "../../api/adminApi";
 import { useState } from "react";
+import { adminApi } from "../../api/adminApi";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function RejectModal({ tx, onClose, onSuccess }) {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   async function handleReject() {
     if (!reason) return alert("Enter rejection reason");
 
     setLoading(true);
-    await adminApi.rejectWithdrawal(tx.id, reason);
+    if (tx.type === "withdraw") {
+      await adminApi.rejectWithdrawal(tx.id, reason);
+      queryClient.invalidateQueries({
+        queryKey: ["admin-withdrawals"],
+      });
+    } else if (tx.type === "invest" || tx.type === "deposit") {
+      await adminApi.rejectManualTransaction(tx.id, reason);
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "deposits", "manual", "pending"],
+      });
+    }
+
     setLoading(false);
     onSuccess();
     onClose();

@@ -71,7 +71,7 @@ export default function DashboardLayout({ title, children }) {
         <nav className="space-y-2">
           {navItem("/dashboard", "Overview", FiHome)}
           {navItem("/dashboard/earnings", "Earnings", FiDollarSign)}
-          {navItem("/dashboard/invest", "Invest", FiTrendingUp)}
+          {navItem("/dashboard/invest", "Invest/Deposit", FiTrendingUp)}
           {navItem("/dashboard/withdraw", "Withdraw", FiCreditCard)}
           {isAdmin &&
             isAuthenticated &&
@@ -114,7 +114,7 @@ export default function DashboardLayout({ title, children }) {
         <nav className="p-4 space-y-2">
           {navItem("/dashboard", "Overview", FiHome)}
           {navItem("/dashboard/earnings", "Earnings", FiDollarSign)}
-          {navItem("/dashboard/invest", "Invest", FiTrendingUp)}
+          {navItem("/dashboard/invest", "Invest/Deposit", FiTrendingUp)}
           {navItem("/dashboard/withdraw", "Withdraw", FiCreditCard)}
           {isAdmin &&
             isAuthenticated &&

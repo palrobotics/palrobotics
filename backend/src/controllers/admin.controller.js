@@ -29,6 +29,25 @@ export async function getPendingWithdrawals(req, res, next) {
   }
 }
 
+export async function getPendingManualTransactions(req, res, next) {
+  try {
+    const snap = await db
+      .collection("transactions")
+      .where("status", "==", "pending_admin_approval")
+      .orderBy("createdAt", "desc")
+      .get();
+
+    const transactions = snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.json({ success: true, transactions });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function approveWithdrawal(req, res, next) {
   try {
     const { transactionId } = req.body;
@@ -176,6 +195,82 @@ export async function rejectWithdrawal(req, res, next) {
 
     res.status(statusCode).json({ message: err.message });
   }
+}
+
+export async function approveDeposit(req, res) {
+  const { transactionId } = req.body;
+
+  await db.runTransaction(async (fireTx) => {
+    const txRef = db.collection("transactions").doc(transactionId);
+    const txSnap = await fireTx.get(txRef);
+
+    if (!txSnap.exists) throw new Error("Transaction not found");
+
+    const tx = txSnap.data();
+    if (tx.status !== "pending_admin_approval") {
+      throw new Error("Transaction not pending admin approval");
+    }
+
+    const walletRef = db.collection("wallets").doc(tx.uid);
+
+    fireTx.update(walletRef, {
+      balance: admin.firestore.FieldValue.increment(tx.amount),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    fireTx.update(txRef, {
+      status: "approved",
+      approvedBy: req.user.uid,
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  res.json({ success: true });
+}
+
+export async function approveInvestment(req, res) {
+  const { transactionId } = req.body;
+
+  await db.runTransaction(async (fireTx) => {
+    const txRef = db.collection("transactions").doc(transactionId);
+    const txSnap = await fireTx.get(txRef);
+
+    if (!txSnap.exists) throw new Error("Transaction not found");
+
+    const tx = txSnap.data();
+    if (tx.status !== "pending_admin_approval") {
+      throw new Error("Transaction not pending admin approval");
+    }
+
+    fireTx.update(txRef, {
+      status: "approved",
+      approvedBy: req.user.uid,
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    fireTx.set(db.collection("investments").doc(), {
+      uid: tx.uid,
+      planId: tx.planId,
+      amount: tx.amount,
+      status: "active",
+      startedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  res.json({ success: true });
+}
+
+export async function rejectManualTransaction(req, res) {
+  const { transactionId, reason } = req.body;
+
+  await db.collection("transactions").doc(transactionId).update({
+    status: "rejected",
+    rejectionReason: reason,
+    rejectedBy: req.user.uid,
+    rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  res.json({ success: true });
 }
 
 //GET /admin/users

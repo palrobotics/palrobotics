@@ -21,8 +21,11 @@ export default function Invest() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [investing, setInvesting] = useState(false);
   const [mode, setMode] = useState("invest");
-  const [paymentMethod, setPaymentMethod] = useState("MTN");
+  const [verifyMethod, setVerifyMethod] = useState("manual");
+  const [paymentMethod, setPaymentMethod] = useState("Airtel");
   const [depositAmount, setDepositAmount] = useState("");
+  const [transactionId, setTransactionId] = useState("");
+
   const { wallet } = useWallet();
   const {
     transactions: depositTxs,
@@ -35,6 +38,17 @@ export default function Invest() {
     loading: investmentLoading,
     refetch: refetchInvestments,
   } = useTransactions("investment");
+
+  const MERCHANTS = {
+    MTN: {
+      name: "PAL Robotics Ltd",
+      code: "",
+    },
+    Airtel: {
+      name: "ANNEST PAL ROBOTICS GROUP",
+      code: "6968528",
+    },
+  };
 
   useEffect(() => {
     if (plan) {
@@ -163,6 +177,69 @@ export default function Invest() {
             </>
           )}
 
+          {/* Verification Method */}
+          {(fundingSource === "mobile" || mode === "deposit") && (
+            <>
+              <label className="text-sm font-medium">
+                Choose Verification Method
+              </label>
+              <select
+                value={verifyMethod}
+                onChange={(e) => setVerifyMethod(e.target.value)}
+                className="w-full p-3 border border-orange-500/70 rounded-lg mb-4"
+              >
+                <option value="manual">
+                  Manual(Enter TID for Admin Approval)
+                </option>
+                <option value="automatic">
+                  Automatic(System Will automatically approve payment)
+                </option>
+              </select>
+            </>
+          )}
+
+          {(fundingSource === "mobile" || mode === "deposit") &&
+            verifyMethod === "manual" && (
+              <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 mb-4 text-sm">
+                <p className="font-medium text-orange-700">
+                  Pay via {paymentMethod} Mobile Money
+                </p>
+                <p>
+                  <strong>Merchant Name:</strong>{" "}
+                  {MERCHANTS[paymentMethod].name}
+                </p>
+                <p>
+                  <strong>Merchant Code:</strong>{" "}
+                  {MERCHANTS[paymentMethod].code}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Complete payment first, then submit transaction ID below.
+                </p>
+              </div>
+            )}
+          {verifyMethod === "automatic" && (
+            <p className="text-xs text-gray-600 mt-1">
+              You will be asked by {paymentMethod} to verify payment and your
+              {mode === "invest" ? " Investment" : " Deposit"} will
+              automatically be credited to your account upon approval.
+            </p>
+          )}
+
+          {(fundingSource === "mobile" || mode === "deposit") &&
+            verifyMethod === "manual" && (
+              <>
+                <label className="block text-sm font-medium mb-1">
+                  Mobile Money Transaction ID
+                </label>
+                <input
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  placeholder="e.g. MP2408ABC123"
+                  className="w-full p-3 border-2 border-orange-500/50 rounded-lg mb-4"
+                />
+              </>
+            )}
+
           {/* PAYMENT LOGO */}
           <motion.div
             key={paymentMethod}
@@ -197,6 +274,8 @@ export default function Invest() {
               method={paymentMethod}
               phone={phone}
               planId={selectedPlan.id}
+              transactionId={transactionId}
+              verifyMethod={verifyMethod}
             />
           )}
 
@@ -213,6 +292,7 @@ export default function Invest() {
               amount={depositAmount}
               phone={phone}
               method={paymentMethod}
+              transactionId={transactionId}
               onClose={() => setShowDepositModal(false)}
             />
           )}
