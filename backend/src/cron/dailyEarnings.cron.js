@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { db } from "../config/firebase.js"; // Ensure db is imported
+import { db } from "../config/firebase.js";
 import { processDailyEarnings } from "../services/earnings.sevice.js";
 
 async function runEarningsWithLock() {
