@@ -10,6 +10,8 @@ const app = express();
 // Basic security headers
 app.use(helmet());
 
+app.set("trust proxy", 1);
+
 // Rate limiters
 const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }); // 15 min, 200 req
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }); // for auth/secure routes
@@ -22,8 +24,8 @@ app.use(generalLimiter);
 /* ================= MIDDLEWARE ================= */
 
 app.use(cors());
-app.use(express.json());
 app.use("/webhook", express.raw({ type: "application/json" }));
+app.use(express.json());
 
 // Apply stricter limiters on high-risk route prefixes
 app.use("/secure", authLimiter);
