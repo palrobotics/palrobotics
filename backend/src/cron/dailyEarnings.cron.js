@@ -8,7 +8,7 @@ async function runEarningsWithLock() {
   try {
     await db.runTransaction(async (tx) => {
       const doc = await tx.get(lockRef);
-      const now = new Date().toDateString();
+      const now = new Date().toISOString().split("T")[0];
 
       if (doc.exists && doc.data().lastRun === now) {
         throw new Error("ALREADY_RAN_TODAY");
