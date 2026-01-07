@@ -13,6 +13,7 @@ import {
 } from "react-icons/fi";
 import { useAuth } from "../../Context/AuthContext";
 import AccountPopup from "../../Components/AccountPopup";
+import InstallButton from "../../Components/InstallButton";
 
 export default function DashboardLayout({ title, children }) {
   const [open, setOpen] = useState(false);
@@ -88,6 +89,7 @@ export default function DashboardLayout({ title, children }) {
             isAuthenticated &&
             navItem("/dashboard/admin", "Admin", FiUser)}
         </nav>
+        <InstallButton isMobile={false} />
       </aside>
 
       {/* Mobile Sidebar Overlay */}
@@ -143,28 +145,28 @@ export default function DashboardLayout({ title, children }) {
             navItem("/dashboard/admin", "Admin", FiUser)}
         </nav>
 
-        {/* Mobile Logout Button */}
-        {isLoggedIn ? (
-          <div className="p-4 border-t border-gray-800 mt-auto">
-            <button
-              onClick={() => setShowLogoutModal(true)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-red-400 hover:bg-gray-800 transition"
-            >
-              <FiLogOut size={18} />
-              Logout
-            </button>
+        {/* Mobile Section: Install Button then Logout */}
+        <div className="mt-auto border-t border-gray-800">
+          <InstallButton isMobile={true} />
+
+          <div className="p-4 pt-0">
+            {isLoggedIn ? (
+              <button
+                onClick={() => setShowLogoutModal(true)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-red-400 hover:bg-gray-800 transition"
+              >
+                <FiLogOut size={18} /> Logout
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-red-400 hover:bg-gray-800 transition"
+              >
+                <FiLogIn size={18} /> LogIn
+              </Link>
+            )}
           </div>
-        ) : (
-          <div className="p-4 border-t border-gray-800 mt-auto">
-            <Link
-              to="/login"
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-red-400 hover:bg-gray-800 transition"
-            >
-              <FiLogIn size={18} />
-              LogIn
-            </Link>
-          </div>
-        )}
+        </div>
       </aside>
 
       {/* Main Content */}
