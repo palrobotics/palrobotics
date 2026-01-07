@@ -114,7 +114,13 @@ export async function approveWithdrawal(req, res, next) {
     });
   } catch (err) {
     console.error("Transaction Error:", err.message);
-    res.status(400).json({ message: err.message });
+    if (err.message.includes("does not exist")) {
+      res.status(404).json({ message: "Transaction not found" });
+    } else if (err.message.includes("already")) {
+      res.status(409).json({ message: err.message }); // Conflict
+    } else {
+      res.status(500).json({ message: "Internal server error" });
+    }
   }
 }
 
@@ -291,33 +297,73 @@ export async function approveDeposit(req, res) {
 export async function approveInvestment(req, res) {
   const { transactionId } = req.body;
 
-  await db.runTransaction(async (fireTx) => {
-    const txRef = db.collection("transactions").doc(transactionId);
-    const txSnap = await fireTx.get(txRef);
+  try {
+    await db.runTransaction(async (fireTx) => {
+      //  Get the Transaction
+      const txRef = db.collection("transactions").doc(transactionId);
+      const txSnap = await fireTx.get(txRef);
 
-    if (!txSnap.exists) throw new Error("Transaction not found");
+      if (!txSnap.exists) throw new Error("Transaction not found");
 
-    const tx = txSnap.data();
-    if (tx.status !== "pending_admin_approval") {
-      throw new Error("Transaction not pending admin approval");
-    }
+      const tx = txSnap.data();
 
-    fireTx.update(txRef, {
-      status: "approved",
-      approvedBy: req.user.uid,
-      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      // Validate Status
+      if (tx.status !== "pending_admin_approval") {
+        throw new Error("Transaction not pending admin approval");
+      }
+
+      // FETCH THE PLAN
+      const planRef = db.collection("plans").doc(tx.planId);
+      const planSnap = await fireTx.get(planRef);
+
+      if (!planSnap.exists) {
+        throw new Error(
+          "The Plan associated with this transaction no longer exists"
+        );
+      }
+
+      const plan = planSnap.data();
+
+      // Calculate Dates
+      const startDate = admin.firestore.Timestamp.now();
+      const endDate = admin.firestore.Timestamp.fromMillis(
+        startDate.toMillis() + plan.durationDays * 24 * 60 * 60 * 1000
+      );
+
+      // Update the Transaction status
+      fireTx.update(txRef, {
+        status: "approved",
+        approvedBy: req.user.uid,
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Create the FULL Investment Document
+      fireTx.set(db.collection("investments").doc(), {
+        uid: tx.uid,
+        planId: tx.planId,
+        planName: plan.name,
+        amount: tx.amount,
+        dailyIncome: plan.dailyIncome,
+        durationDays: plan.durationDays,
+        startDate,
+        endDate,
+        lastPayoutAt: null,
+        status: "active",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
     });
 
-    fireTx.set(db.collection("investments").doc(), {
-      uid: tx.uid,
-      planId: tx.planId,
-      amount: tx.amount,
-      status: "active",
-      startedAt: admin.firestore.FieldValue.serverTimestamp(),
+    return res.json({
+      success: true,
+      message: "Investment approved and created",
     });
-  });
-
-  res.json({ success: true });
+  } catch (err) {
+    console.error("Approval Error:", err);
+    return res.status(400).json({
+      success: false,
+      message: err.message || "Failed to approve investment",
+    });
+  }
 }
 
 export async function rejectManualTransaction(req, res) {
