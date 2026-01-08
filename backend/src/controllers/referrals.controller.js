@@ -2,44 +2,18 @@ import admin from "../config/firebase.js";
 import { db } from "../config/firebase.js";
 import { getReferralChain } from "../helpers/referrals.helper.js";
 
-export async function handleFirstDepositReferral(t, tx) {
-  const userRef = db.collection("users").doc(tx.uid);
-  const userSnap = await t.get(userRef);
-
-  if (!userSnap.exists) return;
-
-  const user = userSnap.data();
-
-  // Guard 1: Already rewarded
-  if (user.firstDepositRewarded) return;
-
-  // Guard 2: No referrer
-  if (!user.referredBy) return;
-
-  // Find referrer by referralCode
-  const refSnap = await db
-    .collection("users")
-    .where("referralCode", "==", user.referredBy)
-    .limit(1)
-    .get();
-
-  if (refSnap.empty) return;
-
-  const referrerDoc = refSnap.docs[0];
-  const referrerUid = referrerDoc.id;
-
+export async function handleFirstDepositReferral(t, tx, referrerUid, userRef) {
   const reward = Math.floor(tx.amount * 0.3); // 30%
-
   const refWalletRef = db.collection("wallets").doc(referrerUid);
 
-  // Credit referrer
+  // 1. Credit referrer
   t.update(refWalletRef, {
     balance: admin.firestore.FieldValue.increment(reward),
     totalEarned: admin.firestore.FieldValue.increment(reward),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // Record referral transaction
+  // 2. Record referral transaction
   t.set(db.collection("transactions").doc(), {
     uid: referrerUid,
     type: "referral_bonus",
@@ -50,7 +24,7 @@ export async function handleFirstDepositReferral(t, tx) {
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // Lock reward so it never happens again
+  // 3. Mark user as rewarded
   t.update(userRef, {
     firstDepositRewarded: true,
   });

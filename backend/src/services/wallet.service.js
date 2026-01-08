@@ -76,12 +76,6 @@ export async function investFromWallet(req, res) {
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         completedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-
-      // CONSUME LOCKED FUNDS (finalize)
-      tx.update(walletRef, {
-        lockedBalance: admin.firestore.FieldValue.increment(-plan.price),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
     });
 
     return res.json({

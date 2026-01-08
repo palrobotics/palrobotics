@@ -55,10 +55,18 @@ export async function processDailyEarnings() {
 
         // Update Investment
         const isFinished = todayStart >= end;
+
         tx.update(invRef, {
           lastPayoutAt: admin.firestore.Timestamp.fromDate(todayStart),
           status: isFinished ? "completed" : "active",
         });
+
+        if (isFinished) {
+          tx.update(walletRef, {
+            lockedBalance: admin.firestore.FieldValue.increment(-inv.amount),
+            balance: admin.firestore.FieldValue.increment(inv.amount),
+          });
+        }
 
         // Ledger Entry
         tx.set(db.collection("earnings").doc(), {

@@ -330,11 +330,25 @@ export async function approveInvestment(req, res) {
         startDate.toMillis() + plan.durationDays * 24 * 60 * 60 * 1000
       );
 
+      //Fetch Wallet
+      const walletRef = db.collection("wallets").doc(tx.uid);
+      const walletSnap = await fireTx.get(walletRef);
+
+      if (!walletSnap.exists) {
+        throw new Error("User wallet not found");
+      }
+
       // Update the Transaction status
       fireTx.update(txRef, {
         status: "approved",
         approvedBy: req.user.uid,
         processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Update Wallet
+      fireTx.update(walletRef, {
+        lockedBalance: admin.firestore.FieldValue.increment(tx.amount),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
       // Create the FULL Investment Document

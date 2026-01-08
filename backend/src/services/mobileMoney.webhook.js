@@ -17,19 +17,43 @@ export async function processMobileMoneyWebhook(payload) {
   const txRef = snap.docs[0].ref;
 
   await db.runTransaction(async (t) => {
-    // --- READ SECTION ---
+    // Reads
     const txSnap = await t.get(txRef);
     if (!txSnap.exists) return;
-
     const tx = txSnap.data();
     if (tx.status !== "pending") return;
 
-    // Fetch wallet (needed for both deposit and investment)
+    const userRef = db.collection("users").doc(tx.uid);
+    const userSnap = await t.get(userRef);
+    const user = userSnap.data();
+
+    // Find referrer ID (Read)
+    let referrerUid = null;
+    if (!user.firstDepositRewarded && user.referredBy) {
+      const refSnap = await db
+        .collection("users")
+        .where("referralCode", "==", user.referredBy)
+        .limit(1)
+        .get();
+
+      if (!refSnap.empty) {
+        referrerUid = refSnap.docs[0].id;
+      }
+    }
+
     const walletRef = db.collection("wallets").doc(tx.uid);
     const walletSnap = await t.get(walletRef);
     if (!walletSnap.exists) throw new Error("Wallet not found");
 
-    // --- WRITE SECTION ---
+    let planData = null;
+    if (tx.type === "investment") {
+      const planRef = db.collection("plans").doc(tx.planId);
+      const planSnap = await t.get(planRef);
+      if (!planSnap.exists) throw new Error("Investment plan no longer exists");
+      planData = planSnap.data();
+    }
+
+    // Writes
     if (status !== "SUCCESS") {
       t.update(txRef, {
         status: "failed",
@@ -38,45 +62,46 @@ export async function processMobileMoneyWebhook(payload) {
       return;
     }
 
-    let balanceChange = tx.amount;
-
-    // Case A: Transaction is an Investment Plan Purchase
     if (tx.type === "investment") {
-      const planRef = db.collection("plans").doc(tx.planId);
-      const planSnap = await t.get(planRef);
-
-      if (!planSnap.exists) throw new Error("Investment plan no longer exists");
-
-      const plan = planSnap.data();
       const startDate = admin.firestore.Timestamp.now();
       const endDate = admin.firestore.Timestamp.fromMillis(
-        startDate.toMillis() + plan.durationDays * 24 * 60 * 60 * 1000
+        startDate.toMillis() + planData.durationDays * 24 * 60 * 60 * 1000
       );
 
+      // Create investment
       t.set(db.collection("investments").doc(), {
         uid: tx.uid,
         planId: tx.planId,
-        planName: plan.name,
-        amount: plan.price,
-        dailyIncome: plan.dailyIncome,
+        planName: planData.name,
+        amount: planData.price,
+        dailyIncome: planData.dailyIncome,
+        durationDays: planData.durationDays,
         status: "active",
         startDate,
         endDate,
+        lastPayoutAt: null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      balanceChange = tx.amount - plan.price;
+      // Update Wallet (Locked Balance for the plan price)
+      t.update(walletRef, {
+        lockedBalance: admin.firestore.FieldValue.increment(planData.price),
+        // If the user paid more than the plan price, add the 'change' to balance
+        balance: admin.firestore.FieldValue.increment(
+          tx.amount - planData.price
+        ),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
     }
 
-    // Case B: Transaction is a standard Deposit (Trigger Referral)
-    if (tx.type === "deposit") {
-      await handleFirstDepositReferral(t, tx);
-    }
+    if (tx.type === "deposit" && referrerUid) {
+      await handleFirstDepositReferral(t, tx, referrerUid, userRef);
 
-    // Final Updates
-    t.update(walletRef, {
-      balance: admin.firestore.FieldValue.increment(balanceChange),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+      t.update(walletRef, {
+        balance: admin.firestore.FieldValue.increment(tx.amount),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
 
     t.update(txRef, {
       status: "completed",
