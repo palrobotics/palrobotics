@@ -41,8 +41,8 @@ export default function Invest() {
 
   const MERCHANTS = {
     MTN: {
-      name: "PAL Robotics Ltd",
-      code: "",
+      name: "Kasangye Topista",
+      code: "0779987519 (Number)",
     },
     Airtel: {
       name: "ANNEST PAL ROBOTICS GROUP",
