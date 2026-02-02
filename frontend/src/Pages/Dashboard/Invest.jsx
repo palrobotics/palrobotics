@@ -234,7 +234,7 @@ export default function Invest() {
                 <input
                   value={transactionId}
                   onChange={(e) => setTransactionId(e.target.value)}
-                  placeholder="e.g. MP2408ABC123"
+                  placeholder="e.g. TID 2408ABC123"
                   className="w-full p-3 border-2 border-orange-500/50 rounded-lg mb-4"
                 />
               </>
