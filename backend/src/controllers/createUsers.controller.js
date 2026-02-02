@@ -57,7 +57,7 @@ export async function createUserAndWallet(req, res) {
       // Create wallet
       tx.set(walletRef, {
         uid,
-        balance: 0,
+        balance: 2000,
         lockedBalance: 0,
         blockedBalance: 0,
         totalDeposited: 0,
