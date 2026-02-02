@@ -19,6 +19,7 @@ export async function createUserAndWallet(req, res) {
 
     const userRef = db.collection("users").doc(uid);
     const walletRef = db.collection("wallets").doc(uid);
+    const transactionRef = db.collection("transactions").doc();
 
     await db.runTransaction(async (tx) => {
       const userSnap = await tx.get(userRef);
@@ -66,6 +67,19 @@ export async function createUserAndWallet(req, res) {
         currency: "UGX",
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      //Record welcome bonus
+      tx.set(transactionRef, {
+        uid,
+        type: "WELCOME_BONUS",
+        amount: 2000,
+        currency: "UGX",
+        direction: "credit",
+        status: "completed",
+        description: "Welcome bonus for new account",
+        balanceAfter: 2000,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     });
 

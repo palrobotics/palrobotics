@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../Firebase/index";
@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const queryClient = useQueryClient();
+  const hasShownWelcome = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -46,6 +47,22 @@ export function AuthProvider({ children }) {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!profile || hasShownWelcome.current) return;
+
+    const key = `welcome_shown_${profile.uid}`;
+
+    // Only show once per account
+    if (!localStorage.getItem(key) && profile.firstDepositRewarded === false) {
+      alert(
+        "🎉 Welcome!\n\nYour account has been successfully created and you have received a UGX 2,000 welcome bonus to get you started.",
+      );
+
+      localStorage.setItem(key, "true");
+      hasShownWelcome.current = true;
+    }
+  }, [profile]);
 
   const logout = async () => {
     try {
