@@ -24,13 +24,6 @@ export function AuthProvider({ children }) {
 
       setUser(firebaseUser);
 
-      // DO NOT touch Firestore if email not verified
-      if (!firebaseUser.emailVerified) {
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
-
       try {
         const snap = await getDoc(doc(db, "users", firebaseUser.uid));
 

@@ -24,13 +24,8 @@ export default function DashboardLayout({ title, children }) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
 
-  const fullName = isAuthenticated ? profile?.fullName ?? "User" : "Guest";
-  const email = isAuthenticated
-    ? isEmailVerified
-      ? profile?.email
-      : "Verify your email"
-    : "Not logged in";
-
+  const fullName = isAuthenticated ? (profile?.fullName ?? "User") : "Guest";
+  const email = isAuthenticated ? profile?.email : "Verify email";
   const isLoggedIn = !!user;
 
   const navItem = (to, label, Icon) => (

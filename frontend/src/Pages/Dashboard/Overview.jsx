@@ -40,16 +40,15 @@ export default function Overview() {
   const level3Earnings = referralSummary?.level3 ?? 0;
 
   // Defaults (for logged-out users)
-  const balance = isAuthenticated ? wallet?.balance ?? 0 : 0;
-  const lockedBalance = isAuthenticated ? wallet?.lockedBalance ?? 0 : 0;
-  const totalEarned = isAuthenticated ? wallet?.totalEarned ?? 0 : 0;
+  const balance = isAuthenticated ? (wallet?.balance ?? 0) : 0;
+  const lockedBalance = isAuthenticated ? (wallet?.lockedBalance ?? 0) : 0;
+  const totalEarned = isAuthenticated ? (wallet?.totalEarned ?? 0) : 0;
 
-  const activeInvestments = isAuthenticated ? data?.activePlans ?? 0 : 0;
-  const teamMemberCount = isAuthenticated ? teamCount ?? 0 : 0;
+  const activeInvestments = isAuthenticated ? (data?.activePlans ?? 0) : 0;
+  const teamMemberCount = isAuthenticated ? (teamCount ?? 0) : 0;
 
-  const inviteCode = isAuthenticated
-    ? profile?.referralCode ?? "N/A"
-    : "PAL-XXXX";
+  const inviteCode = isAuthenticated ? profile?.referralCode : "PAL-XXXX";
+  console.log(profile);
 
   const inviteLink = isAuthenticated
     ? `${window.location.origin}/register?ref=${inviteCode}`
