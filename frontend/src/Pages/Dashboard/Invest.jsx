@@ -42,7 +42,7 @@ export default function Invest() {
   const MERCHANTS = {
     MTN: {
       name: "Kasangye Topista",
-      number: "0779987519 (Number)",
+      number: "0779987519",
     },
     Airtel: {
       name: "Ssebale Charles",
