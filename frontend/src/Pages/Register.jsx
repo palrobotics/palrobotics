@@ -66,7 +66,7 @@ export default function Register() {
       const userCred = await createUserWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
       const user = userCred.user;
       const token = await user.getIdToken();
@@ -88,7 +88,7 @@ export default function Register() {
           referralCode: myNewCode,
           referredBy: potentialInviter,
         },
-        token
+        token,
       );
 
       await sendEmailVerification(user);
@@ -141,7 +141,7 @@ export default function Register() {
 
             <input
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value.trim())}
               className="w-full px-4 py-3 border-2 border-orange-500/50 rounded-lg mb-4"
               placeholder="Email address"
             />
@@ -189,8 +189,8 @@ export default function Register() {
                   passwordStrength === "weak"
                     ? "text-red-500"
                     : passwordStrength === "medium"
-                    ? "text-yellow-500"
-                    : "text-green-600"
+                      ? "text-yellow-500"
+                      : "text-green-600"
                 }`}
               >
                 {passwordStrength === "weak" && "Weak password"}

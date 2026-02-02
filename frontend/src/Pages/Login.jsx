@@ -155,7 +155,7 @@ export default function Login() {
 
                 <input
                   value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
+                  onChange={(e) => setUserEmail(e.target.value.trim())}
                   className="w-full px-4 py-3 border-2 border-orange-500/50 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500"
                   placeholder="Email address"
                 />
