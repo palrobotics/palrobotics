@@ -15,8 +15,7 @@ export async function getReferralChain(uid) {
 
     const referrerSnap = await db
       .collection("users")
-      .where("referralCode", "==", referredByCode)
-      .limit(1)
+      .doc(userSnap.data().referredBy)
       .get();
 
     if (referrerSnap.empty) break;
