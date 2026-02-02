@@ -23,7 +23,11 @@ app.use(generalLimiter);
 
 /* ================= MIDDLEWARE ================= */
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["https://palroboticsandinvestment.com"],
+  }),
+);
 app.use("/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
 
