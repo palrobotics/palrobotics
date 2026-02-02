@@ -42,11 +42,11 @@ export default function Invest() {
   const MERCHANTS = {
     MTN: {
       name: "Kasangye Topista",
-      code: "0779987519 (Number)",
+      number: "0779987519 (Number)",
     },
     Airtel: {
-      name: "ANNEST PAL ROBOTICS GROUP",
-      code: "6968528",
+      name: "Ssebale Charles",
+      number: "0756936660",
     },
   };
 
@@ -205,12 +205,12 @@ export default function Invest() {
                   Pay via {paymentMethod} Mobile Money
                 </p>
                 <p>
-                  <strong>Merchant Name:</strong>{" "}
+                  <strong>Registered Name:</strong>{" "}
                   {MERCHANTS[paymentMethod].name}
                 </p>
                 <p>
-                  <strong>Merchant Code:</strong>{" "}
-                  {MERCHANTS[paymentMethod].code}
+                  <strong>Phone Number:</strong>{" "}
+                  {MERCHANTS[paymentMethod].number}
                 </p>
                 <p className="text-xs text-gray-600 mt-1">
                   Complete payment first, then submit transaction ID below.
