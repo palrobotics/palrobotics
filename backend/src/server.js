@@ -5,6 +5,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
 const app = express();
+const clientUrl = process.env.FRONTEND_URL;
 
 /* ========== SECURITY MIDDLEWARE ========== */
 // Basic security headers
@@ -25,7 +26,7 @@ app.use(generalLimiter);
 
 app.use(
   cors({
-    origin: ["https://palroboticsandinvestment.com"],
+    origin: [clientUrl],
   }),
 );
 app.use("/webhook", express.raw({ type: "application/json" }));

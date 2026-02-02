@@ -48,7 +48,6 @@ export default function Overview() {
   const teamMemberCount = isAuthenticated ? (teamCount ?? 0) : 0;
 
   const inviteCode = isAuthenticated ? profile?.referralCode : "PAL-XXXX";
-  console.log(profile);
 
   const inviteLink = isAuthenticated
     ? `${window.location.origin}/register?ref=${inviteCode}`
